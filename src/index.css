@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at top, #14724a 0%, #0a3a23 60%, #07291a 100%);
+    font-family: 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .card-face {
+    @apply relative inline-flex flex-col items-center justify-between
+           bg-white rounded-xl shadow-lg select-none font-bold
+           border border-gray-300;
+    width: 64px;
+    height: 92px;
+    padding: 6px 8px;
+  }
+  .card-face.lg {
+    width: 88px;
+    height: 124px;
+    padding: 8px 10px;
+  }
+  .card-face.xl {
+    width: 110px;
+    height: 154px;
+    padding: 10px 12px;
+  }
+  .card-face .corner {
+    @apply text-base leading-none;
+  }
+  .card-face.lg .corner { font-size: 1.25rem; }
+  .card-face.xl .corner { font-size: 1.5rem; }
+  .card-face .center {
+    @apply text-2xl leading-none;
+  }
+  .card-face.lg .center { font-size: 2.25rem; }
+  .card-face.xl .center { font-size: 3rem; }
+  .card-back {
+    @apply rounded-xl shadow-lg;
+    width: 64px;
+    height: 92px;
+    background: repeating-linear-gradient(45deg, #1e3a8a 0 8px, #1e40af 8px 16px);
+    border: 2px solid #fff;
+  }
+  .card-back.lg { width: 88px; height: 124px; }
+
+  .btn {
+    @apply inline-flex items-center justify-center
+           px-4 py-3 rounded-xl font-bold transition-all
+           text-base shadow active:scale-[0.98]
+           min-h-[48px];
+  }
+  .btn-primary {
+    @apply btn bg-chipGold text-feltDark hover:bg-yellow-400;
+  }
+  .btn-secondary {
+    @apply btn bg-white/10 text-white hover:bg-white/20 border border-white/20;
+  }
+  .btn-danger {
+    @apply btn bg-red-500/90 text-white hover:bg-red-500;
+  }
+  .btn-success {
+    @apply btn bg-emerald-500 text-white hover:bg-emerald-400;
+  }
+  .panel {
+    @apply bg-black/30 backdrop-blur rounded-2xl p-4 border border-white/10;
+  }
+  .opt-btn {
+    @apply w-full text-left p-3 rounded-xl border-2 border-white/20
+           bg-white/5 hover:bg-white/10 transition
+           text-base min-h-[56px] cursor-pointer;
+  }
+  .opt-btn.correct {
+    @apply border-emerald-400 bg-emerald-500/20;
+  }
+  .opt-btn.wrong {
+    @apply border-red-400 bg-red-500/20;
+  }
+  .opt-btn.selected {
+    @apply border-yellow-300 bg-yellow-400/10;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-bold;
+  }
+}

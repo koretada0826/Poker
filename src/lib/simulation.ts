@@ -1,6 +1,8 @@
 import type { ActionType, Card, Phase, SimulationState } from '../types';
 import { fullDeck, shuffle } from './deck';
 import { compareResults, evaluateBest } from './handEvaluator';
+import { equityVsRandom } from './equity';
+import { requiredEquity, evCall } from './pokerMath';
 
 export const STARTING_CHIPS = 2000;
 const SB = 10;
@@ -136,8 +138,9 @@ export function applyPlayerAction(
   const playerBest =
     s.community.length >= 3 ? evaluateBest([...s.playerHand, ...s.community]) : null;
 
-  // 推奨アクションを計算
-  const suggested = suggestAction(s);
+  // 推奨アクションを計算（数式ベース）
+  const suggestedRes = suggestActionMath(s);
+  const suggested = suggestedRes.action;
 
   let feedback: SimulationState['feedback'] = undefined;
 
@@ -200,39 +203,41 @@ export function applyPlayerAction(
   }
 
   // フィードバック作成（プレイヤーの意思決定への評価）
-  feedback = makeFeedback(s, action, suggested, playerBest);
+  feedback = makeFeedback(s, action, suggested, playerBest, suggestedRes);
 
   return { state: s, feedback };
 }
 
-function suggestAction(state: SimulationState): ActionType {
-  if (state.phase === 'preflop') {
-    const [a, b] = state.playerHand;
-    const high = Math.max(a.rank, b.rank);
-    const low = Math.min(a.rank, b.rank);
-    const pair = a.rank === b.rank;
-    const suited = a.suit === b.suit;
-    const strong = (pair && high >= 9) || (high === 14 && low >= 12) || (high >= 13 && low >= 12);
-    const ok = (pair && high >= 7) || (high === 14 && low >= 10) || (high >= 12 && low >= 11) || (suited && high - low <= 2 && low >= 8);
-    if (state.toCall > 0) {
-      if (strong) return 'raise';
-      if (ok) return 'call';
-      return 'fold';
-    }
-    return strong ? 'bet' : 'check';
-  }
-  // ポストフロップ
-  const best = evaluateBest([...state.playerHand, ...state.community]);
-  const dangerous = boardDanger(state.community);
+interface SuggestResult {
+  action: ActionType;
+  equity: number;       // %
+  required: number;     // %
+  ev: number;           // chips
+}
+
+// 数学（エクイティ＋ポットオッズ＋EV）に基づく推奨。
+// MC=200シムなので軽量、決定の根拠を返す。
+export function suggestActionMath(state: SimulationState): SuggestResult {
+  const sims = state.phase === 'preflop' ? 200 : 250;
+  const eq = equityVsRandom(state.playerHand, state.community, sims).equity;
+  const req = state.toCall > 0 ? requiredEquity(state.pot, state.toCall) : 0;
+  const ev = state.toCall > 0 ? evCall(state.pot, state.toCall, eq / 100) : 0;
+
   if (state.toCall > 0) {
-    if (best.rank >= 5) return 'raise';
-    if (best.rank >= 3 && !dangerous) return 'call';
-    if (best.rank >= 2 && !dangerous) return 'call';
-    return 'fold';
+    const margin = eq - req;
+    if (margin >= 18) return { action: 'raise', equity: eq, required: req, ev };
+    if (margin >= 0)  return { action: 'call',  equity: eq, required: req, ev };
+    return { action: 'fold', equity: eq, required: req, ev };
   }
-  if (best.rank >= 4) return 'bet';
-  if (best.rank >= 2 && !dangerous) return 'bet';
-  return 'check';
+  // チェックできる場面
+  if (eq >= 65) return { action: 'bet',   equity: eq, required: req, ev };
+  if (eq >= 48) return { action: 'check', equity: eq, required: req, ev }; // 中堅は受けで
+  return { action: 'check', equity: eq, required: req, ev };
+}
+
+// 後方互換用
+function suggestAction(state: SimulationState): ActionType {
+  return suggestActionMath(state).action;
 }
 
 function boardDanger(community: Card[]): boolean {
@@ -344,25 +349,42 @@ function makeFeedback(
   s: SimulationState,
   yourAction: ActionType,
   suggested: ActionType,
-  playerBest: ReturnType<typeof evaluateBest> | null
+  playerBest: ReturnType<typeof evaluateBest> | null,
+  res?: SuggestResult
 ): SimulationState['feedback'] {
   const dangerous = s.community.length >= 3 && boardDanger(s.community);
   const matched = yourAction === suggested;
+  const eq = res ? res.equity.toFixed(0) : '?';
+  const req = res ? res.required.toFixed(0) : '?';
+  const ev = res ? res.ev : 0;
+
+  // 数字を含む解説（小学生にも分かるよう「10回中何回勝てるか」も併記）
+  const eqWords = res ? `（10回中およそ${Math.round(res.equity / 10)}回勝てる強さ）` : '';
   const good = matched
-    ? '判断OK。状況に合った行動です。'
-    : `推奨は「${actionJa(suggested)}」でした。`;
+    ? `判断OK。あなたの勝率は${eq}%${eqWords}、推奨と一致した良い選択です。`
+    : `推奨は「${actionJa(suggested)}」でした。あなたの勝率は${eq}%${eqWords}。`;
+
   let risk = '';
-  if (yourAction === 'fold' && (suggested === 'bet' || suggested === 'raise')) {
-    risk = '強い手で降りるとチップを増やすチャンスを逃します。次は強気で行ってOK。';
-  } else if ((yourAction === 'call' || yourAction === 'raise') && suggested === 'fold') {
-    risk = '弱い手や危険な場で参加するとチップを失いがち。「迷ったら降りる」を思い出して。';
-  } else if (yourAction === 'check' && suggested === 'bet') {
-    risk = '強い手はベットして相手から払ってもらう方が得です。';
+  if (res && res.required > 0) {
+    if (yourAction === 'fold' && (suggested === 'bet' || suggested === 'raise' || suggested === 'call')) {
+      risk = `必要勝率${req}% < あなたの勝率${eq}% → コールしても長期で得（+EV ${ev.toFixed(0)}チップ）。降りるとチャンスを逃します。`;
+    } else if ((yourAction === 'call' || yourAction === 'raise') && suggested === 'fold') {
+      risk = `必要勝率${req}% > あなたの勝率${eq}% → 払うほどの勝ち目がない（−EV ${ev.toFixed(0)}チップ）。「迷ったら降りる」が正解。`;
+    } else {
+      risk = `必要勝率${req}% / あなたの勝率${eq}% → ${ev >= 0 ? '+' : ''}${ev.toFixed(0)}チップの期待値。`;
+    }
   } else {
-    risk = '大きな問題はなし。';
+    if (yourAction === 'check' && suggested === 'bet') {
+      risk = `あなたの勝率${eq}%は十分高い。ベットして相手から払ってもらう方が得です。`;
+    } else if (yourAction === 'bet' && suggested === 'check') {
+      risk = `あなたの勝率${eq}%だと攻めるほど強くない。チェックして無料で次のカードを見るのが安全。`;
+    } else {
+      risk = matched ? '良い判断。' : `あなたの勝率${eq}%。状況をもう一度見直してみよう。`;
+    }
   }
-  let next = '次の場面では「①自分の役 ②場の危険 ③相手の動き」の3点を見ましょう。';
-  if (dangerous) next = '場に同マーク3枚や連続数字があるときは特に慎重に。';
+
+  let next = '次は「①勝率 ②必要勝率 ③EV」の3点を必ずチェック。';
+  if (dangerous) next = '場に同マーク3枚や連続数字。誰かが強い役の可能性。慎重に。';
   if (playerBest) next = `${next} 現在の役: ${playerBest.jaName}`;
   return { yourAction, suggested, good, risk, next };
 }

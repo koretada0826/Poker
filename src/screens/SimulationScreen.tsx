@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import CardRow from '../components/CardRow';
+import LiveOddsPanel from '../components/LiveOddsPanel';
+import CheatSheet from '../components/CheatSheet';
 import {
   actionJa,
   applyPlayerAction,
@@ -33,6 +35,8 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
   const [expGain, setExpGain] = useState<number | null>(null);
   const [stackBefore, setStackBefore] = useState<number>(STARTING_CHIPS);
   const [pulseChip, setPulseChip] = useState<'win' | 'lose' | null>(null);
+  const [cheatOpen, setCheatOpen] = useState(false);
+  const [showOdds, setShowOdds] = useState(true);
   const expTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playerBest = useMemo(() => {
@@ -191,6 +195,19 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
           {streak >= 2 ? `🔥 ${streak} 連続good` : `判断 ${judgeScore}/${judgeTotal}`}
         </span>
         <span className="badge bg-chipGold text-feltDark font-black">POT: {state.pot}</span>
+        <button
+          onClick={() => setCheatOpen(true)}
+          className="badge bg-purple-500/30 border border-purple-300/50 hover:bg-purple-500/50"
+        >
+          📘 勝つコツ
+        </button>
+        <button
+          onClick={() => setShowOdds(v => !v)}
+          className={`badge border border-white/20 ${showOdds ? 'bg-emerald-500/30' : 'bg-white/10'}`}
+          title="勝率パネル表示切替"
+        >
+          📊 {showOdds ? 'ON' : 'OFF'}
+        </button>
       </div>
 
       {/* CPU */}
@@ -266,6 +283,17 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
           <div className="font-bold text-chipGold mb-1">⏱ 5秒チェック</div>
           ①自分の手は強い？ ②場の危険は？ ③相手は強そう？ ④払う価値は？ ⑤迷ったら降りる。
         </div>
+      )}
+
+      {/* ライブ勝率パネル */}
+      {!state.finished && showOdds && (
+        <LiveOddsPanel
+          hole={state.playerHand}
+          community={state.community}
+          pot={state.pot}
+          toCall={state.toCall}
+          phase={state.phase}
+        />
       )}
 
       {/* ベットサイズ選択 */}
@@ -395,6 +423,8 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
           中断してホームへ
         </button>
       </div>
+
+      <CheatSheet open={cheatOpen} onClose={() => setCheatOpen(false)} />
     </div>
   );
 }

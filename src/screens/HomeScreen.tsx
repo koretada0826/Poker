@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import CheatSheet from '../components/CheatSheet';
 import { skillScores, weakAdvice } from '../lib/storage';
 import type { Mode, PlayerStats } from '../types';
 
@@ -31,6 +33,7 @@ const TODAY_MISSIONS: Mission[] = [
 ];
 
 export default function HomeScreen({ stats, go, onReset, timer }: Props) {
+  const [cheatOpen, setCheatOpen] = useState(false);
   const skills = skillScores(stats);
   const advice = weakAdvice(stats);
   const overallLevelAvg =
@@ -211,11 +214,14 @@ export default function HomeScreen({ stats, go, onReset, timer }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+        <button className="btn-secondary text-sm" onClick={() => setCheatOpen(true)}>🎓 勝つコツ</button>
         <button className="btn-secondary text-sm" onClick={() => go('hand-book')}>📘 役図鑑</button>
         <button className="btn-secondary text-sm" onClick={() => go('progress')}>📊 進捗</button>
         <button className="btn-secondary text-sm" onClick={onReset}>進捗リセット</button>
       </div>
+
+      <CheatSheet open={cheatOpen} onClose={() => setCheatOpen(false)} />
 
       <div className="mt-8 text-[11px] text-white/40 text-center leading-relaxed">
         ポーカーは「短期の勝ち負け」ではなく「+EVな判断の積み重ね」のゲーム。<br />

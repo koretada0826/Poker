@@ -150,6 +150,7 @@ export interface SimulationState {
   cpuChips: number;
   toCall: number;       // 現在コールに必要な額
   phase: Phase;
+  button: 'you' | 'cpu'; // ヘッズアップではボタン=SB
   log: { who: 'you' | 'cpu' | 'system'; msg: string }[];
   feedback?: {
     yourAction: ActionType;

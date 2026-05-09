@@ -2,27 +2,35 @@ import type { ActionType, Card, Phase, SimulationState } from '../types';
 import { fullDeck, shuffle } from './deck';
 import { compareResults, evaluateBest } from './handEvaluator';
 
-const STARTING_CHIPS = 2000;
+export const STARTING_CHIPS = 2000;
 const SB = 10;
 const BB = 20;
 
-export function newSimulation(): SimulationState {
+export function newSimulation(carry?: { playerChips?: number; cpuChips?: number; button?: 'you' | 'cpu' }): SimulationState {
   const deck = shuffle(fullDeck());
   const playerHand = [deck.pop()!, deck.pop()!];
   const cpuHand = [deck.pop()!, deck.pop()!];
   const pot = SB + BB;
+  const button: 'you' | 'cpu' = carry?.button === 'you' ? 'cpu' : 'you'; // 交代
+  // ヘッズアップではボタン=SB
+  const playerIsBtn = button === 'you';
+  const playerPaid = playerIsBtn ? SB : BB;
+  const cpuPaid = playerIsBtn ? BB : SB;
+  const baseP = carry?.playerChips ?? STARTING_CHIPS;
+  const baseC = carry?.cpuChips ?? STARTING_CHIPS;
   return {
     deck,
     playerHand,
     cpuHand,
     community: [],
     pot,
-    playerChips: STARTING_CHIPS - BB,
-    cpuChips: STARTING_CHIPS - BB,
-    toCall: 0,
+    playerChips: baseP - playerPaid,
+    cpuChips: baseC - cpuPaid,
+    toCall: playerIsBtn ? BB - SB : 0, // BTNはSBを払い済み、BBにコール必要
     phase: 'preflop',
+    button,
     log: [
-      { who: 'system', msg: '新しいハンドが始まりました。SB+BB=30 がポットに入っています。' },
+      { who: 'system', msg: `新しいハンド開始（ボタン: ${playerIsBtn ? 'あなた' : 'CPU'}）。SB+BB=30 がポットに。` },
       { who: 'system', msg: 'プリフロップ：自分の手札2枚を見て判断しましょう。' },
     ],
     finished: false,
@@ -96,12 +104,27 @@ interface ActionResult {
   feedback: SimulationState['feedback'];
 }
 
-const BET_SIZE = 60;
+// プリセットのベットサイズ（pot比）
+export const BET_SIZE_OPTIONS: { key: string; label: string; potRatio: number }[] = [
+  { key: 'third', label: '1/3 pot', potRatio: 1 / 3 },
+  { key: 'half',  label: '1/2 pot', potRatio: 1 / 2 },
+  { key: 'pot',   label: 'pot',     potRatio: 1 },
+  { key: 'over',  label: '2x pot',  potRatio: 2 },
+];
+
+export function defaultBetSize(state: SimulationState): number {
+  return Math.max(20, Math.floor(state.pot / 2));
+}
+
+export function clampBet(state: SimulationState, amt: number): number {
+  return Math.max(20, Math.min(state.playerChips, Math.floor(amt)));
+}
 
 // プレイヤーのアクションを処理
 export function applyPlayerAction(
   state: SimulationState,
-  action: ActionType
+  action: ActionType,
+  betAmount?: number
 ): ActionResult {
   if (state.finished) return { state, feedback: undefined };
   const s: SimulationState = {
@@ -150,26 +173,28 @@ export function applyPlayerAction(
       advanceStreet(s);
       break;
 
-    case 'bet':
+    case 'bet': {
       if (s.toCall > 0) {
-        // ベットが既にあるならレイズ扱い
-        return applyPlayerAction(s, 'raise');
+        return applyPlayerAction(s, 'raise', betAmount);
       }
-      s.playerChips -= BET_SIZE;
-      s.pot += BET_SIZE;
+      const amt = clampBet(s, betAmount ?? defaultBetSize(s));
+      s.playerChips -= amt;
+      s.pot += amt;
       s.toCall = 0;
-      s.log.push({ who: 'you', msg: `ベット（${BET_SIZE}）` });
-      // CPUに渡す
-      respondToPlayerBet(s, BET_SIZE);
+      s.log.push({ who: 'you', msg: `ベット（${amt}）` });
+      respondToPlayerBet(s, amt);
       break;
+    }
 
     case 'raise': {
-      const total = s.toCall + BET_SIZE; // コール分 + さらに上乗せ
-      s.playerChips -= total;
-      s.pot += total;
-      s.log.push({ who: 'you', msg: `レイズ（さらに${BET_SIZE}）` });
+      const raiseTo = clampBet(s, betAmount ?? defaultBetSize(s));
+      const total = s.toCall + raiseTo;
+      const pay = Math.min(s.playerChips, total);
+      s.playerChips -= pay;
+      s.pot += pay;
+      s.log.push({ who: 'you', msg: `レイズ（さらに${raiseTo}）` });
       s.toCall = 0;
-      respondToPlayerBet(s, BET_SIZE);
+      respondToPlayerBet(s, raiseTo);
       break;
     }
   }
@@ -224,8 +249,14 @@ function boardDanger(community: Card[]): boolean {
   return false;
 }
 
+function cpuBetSize(s: SimulationState): number {
+  // pot比率でランダムに選ぶ（1/2〜1pot を中心）
+  const ratios = [0.5, 0.66, 0.75, 1.0];
+  const r = ratios[Math.floor(Math.random() * ratios.length)];
+  return Math.max(20, Math.min(s.cpuChips, Math.floor(s.pot * r)));
+}
+
 function respondToPlayerBet(s: SimulationState, betAmt: number) {
-  // CPUの応答
   s.toCall = betAmt;
   const cpuAct = cpuPostflopAction(s);
   if (cpuAct === 'fold') {
@@ -237,25 +268,27 @@ function respondToPlayerBet(s: SimulationState, betAmt: number) {
     return;
   }
   if (cpuAct === 'call') {
-    s.cpuChips -= s.toCall;
-    s.pot += s.toCall;
-    s.log.push({ who: 'cpu', msg: `CPUはコール（${s.toCall}）` });
+    const pay = Math.min(s.cpuChips, s.toCall);
+    s.cpuChips -= pay;
+    s.pot += pay;
+    s.log.push({ who: 'cpu', msg: `CPUはコール（${pay}）` });
     s.toCall = 0;
     advanceStreet(s);
     return;
   }
   if (cpuAct === 'raise') {
-    const total = s.toCall + BET_SIZE;
-    s.cpuChips -= total;
-    s.pot += total;
-    s.log.push({ who: 'cpu', msg: `CPUはレイズ（さらに${BET_SIZE}）` });
-    s.toCall = BET_SIZE; // プレイヤーがコール/フォールド/再レイズ
+    const raise = cpuBetSize(s);
+    const total = s.toCall + raise;
+    const pay = Math.min(s.cpuChips, total);
+    s.cpuChips -= pay;
+    s.pot += pay;
+    s.log.push({ who: 'cpu', msg: `CPUはレイズ（さらに${raise}）` });
+    s.toCall = raise;
     return;
   }
 }
 
 function cpuActAndAdvance(s: SimulationState) {
-  // プレイヤーがチェック→CPUの番
   const act = cpuPostflopAction({ ...s, toCall: 0 });
   if (act === 'check' || s.phase === 'preflop') {
     s.log.push({ who: 'cpu', msg: 'CPUはチェック' });
@@ -263,10 +296,11 @@ function cpuActAndAdvance(s: SimulationState) {
     return;
   }
   if (act === 'bet') {
-    s.cpuChips -= BET_SIZE;
-    s.pot += BET_SIZE;
-    s.toCall = BET_SIZE;
-    s.log.push({ who: 'cpu', msg: `CPUはベット（${BET_SIZE}）` });
+    const amt = cpuBetSize(s);
+    s.cpuChips -= amt;
+    s.pot += amt;
+    s.toCall = amt;
+    s.log.push({ who: 'cpu', msg: `CPUはベット（${amt}）` });
     return;
   }
 }

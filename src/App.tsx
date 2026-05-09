@@ -120,7 +120,7 @@ export default function App() {
         return <AdvancedPracticeScreen quizType="spr-mdf" group="math" title="SPR/MDF/α 計算" count={8} stats={stats} setStats={setStats} go={setMode} />;
 
       case 'simulation':
-        return <SimulationScreen stats={stats} setStats={setStats} go={setMode} hands={5} />;
+        return <SimulationScreen stats={stats} setStats={setStats} go={setMode} hands={10} />;
       case 'exam':
         return <ExamScreen stats={stats} setStats={setStats} go={setMode} />;
       case 'boss-exam':

@@ -62,6 +62,13 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
     if (!state.finished) setBetSize(defaultBetSize(state));
   }, [state.pot, state.finished]);
 
+  // unmount時に EXP タイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (expTimer.current) clearTimeout(expTimer.current);
+    };
+  }, []);
+
   const onAction = (act: ActionType) => {
     if (act === 'bet' || act === 'raise') setStackBefore(state.playerChips);
     const r = applyPlayerAction(state, act, act === 'bet' || act === 'raise' ? betSize : undefined);

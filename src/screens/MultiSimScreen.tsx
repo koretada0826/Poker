@@ -54,6 +54,13 @@ export default function MultiSimScreen({ stats, setStats, go, hands = 8 }: Props
     if (!state.finished) setBetSize(defaultMultiBet(state));
   }, [state.pot, state.finished]);
 
+  // unmount時に EXP タイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (expTimer.current) clearTimeout(expTimer.current);
+    };
+  }, []);
+
   const onAction = (act: ActionType) => {
     const r = applyHumanAction(state, act, act === 'bet' || act === 'raise' ? betSize : undefined);
     setState(r.state);

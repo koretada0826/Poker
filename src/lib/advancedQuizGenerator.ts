@@ -164,15 +164,20 @@ export function makeRangePositionQuiz(): Quiz {
   const pos: Position = pick(['UTG', 'MP', 'CO', 'BTN'] as Position[]);
   const correctSet = OPEN_RANGES[pos];
   const inRange = pick(Array.from(correctSet));
-  // outOfRange: BB(=空)集合から選ぶ代わりに「BTNにあってUTGにないもの」など
-  const outsideCandidates = ['72o', '83o', '94o', 'T2o', 'J3o', 'Q4o', '63s', '52o', '85o', '94s'];
-  const outOf = pick(outsideCandidates.filter(h => !correctSet.has(h)));
-  // 質問: 「以下のうち、{pos}でOPENすべきなのは？」
-  const distractors = shuffle(outsideCandidates).slice(0, 3).filter(h => !correctSet.has(h)).slice(0, 3);
-  while (distractors.length < 3) distractors.push(pick(outsideCandidates));
-  const options = shuffle([inRange, ...distractors.filter(d => d !== inRange).slice(0, 3)]);
-  while (options.length < 4) options.push(pick(outsideCandidates));
-  void outOf;
+  // outOfRange 候補（このレンジに無いもののみ）
+  const outsideCandidates = ['72o', '83o', '94o', 'T2o', 'J3o', 'Q4o', '63s', '52o', '85o', '94s']
+    .filter(h => !correctSet.has(h) && h !== inRange);
+
+  // 重複なくダミーを3つ選ぶ
+  const seen = new Set<string>([inRange]);
+  const distractors: string[] = [];
+  for (const h of shuffle(outsideCandidates)) {
+    if (seen.has(h)) continue;
+    distractors.push(h);
+    seen.add(h);
+    if (distractors.length === 3) break;
+  }
+  const options = shuffle([inRange, ...distractors]);
   return {
     id: nextId(),
     type: 'range-position',

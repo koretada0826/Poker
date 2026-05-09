@@ -1,6 +1,6 @@
 import type { Card, Quiz, Rank, Suit } from '../types';
 import { fullDeck, makeCard, rankToDisplay, shuffle, SUIT_JA } from './deck';
-import { evaluateBest } from './handEvaluator';
+import { compareResults, evaluateBest } from './handEvaluator';
 
 let qid = 0;
 const nextId = () => `q-${++qid}-${Math.random().toString(36).slice(2, 7)}`;
@@ -230,14 +230,16 @@ function generateScenario(s: string): Card[] {
 export function makeHandCompareQuiz(): Quiz {
   let a = generateScenario(pick(['pair', 'two-pair', 'trips', 'high-card']));
   let b = generateScenario(pick(['pair', 'two-pair', 'trips', 'high-card']));
-  // 引き分けを避ける
+  // 引き分け（同役・同キッカー）を避ける
   let safety = 0;
-  while (evaluateBest(a).rank === evaluateBest(b).rank && safety++ < 10) {
+  while (compareResults(evaluateBest(a), evaluateBest(b)) === 0 && safety++ < 20) {
     b = generateScenario(pick(['pair', 'two-pair', 'trips', 'high-card', 'straight']));
   }
   const ra = evaluateBest(a);
   const rb = evaluateBest(b);
-  const winner = ra.rank >= rb.rank ? 'A' : 'B';
+  // 同役の場合もキッカーまで含めて比較（compareResults は tiebreak も比較）
+  const cmp = compareResults(ra, rb);
+  const winner = cmp >= 0 ? 'A' : 'B';
   const options = ['プレイヤーAの勝ち', 'プレイヤーBの勝ち'];
   return {
     id: nextId(),

@@ -317,11 +317,27 @@ function advanceIfNeeded(state: MultiSimState): MultiSimState {
   return state;
 }
 
+function autoShowdownIfNoLive(state: MultiSimState): boolean {
+  // 全員 allIn or fold で「次にアクションできる人」が居なければ
+  // ボードを最後まで配って showdown する
+  if (state.finished) return true;
+  if (nonFoldedNotAllIn(state).length === 0) {
+    while (state.community.length < 5 && state.phase !== 'showdown') {
+      dealCommunityForNextStreet(state);
+    }
+    if (!state.finished) doShowdown(state);
+    return true;
+  }
+  return false;
+}
+
 function advanceCpuActions(state: MultiSimState): MultiSimState {
   // 上限ループ防止
   let safety = 0;
-  while (!state.finished && state.toAct !== 0 && safety < 50) {
+  while (!state.finished && state.toAct !== 0 && safety < 80) {
     safety++;
+    // 「次にアクションできる人」が誰もいなければ即showdown
+    if (autoShowdownIfNoLive(state)) break;
     const cur = state.players[state.toAct];
     if (cur.folded || cur.allIn) {
       state.toAct = nextLiveAfter(state, state.toAct);
@@ -334,21 +350,12 @@ function advanceCpuActions(state: MultiSimState): MultiSimState {
     if (state.finished) break;
     // プレイヤーがフォールド/オールインなら、残りCPUだけで終わるまで進める
     if (state.toAct === 0 && (state.players[0].folded || state.players[0].allIn)) {
-      // プレイヤーは行動できないので CPU進行を続ける
-      const live = nonFoldedNotAllIn(state);
-      if (live.length === 0) {
-        // 全員allin or fold → 残り生存者で showdown
-        // 必要ならボードを補完
-        while (state.community.length < 5 && !state.finished) {
-          dealCommunityForNextStreet(state);
-        }
-        if (state.phase !== 'showdown') doShowdown(state);
-        break;
-      }
-      // 次の生きてるCPUに進める
+      if (autoShowdownIfNoLive(state)) break;
       state.toAct = nextLiveAfter(state, state.toAct);
     }
   }
+  // ループ終了時にも保険
+  autoShowdownIfNoLive(state);
   return state;
 }
 

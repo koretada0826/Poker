@@ -179,8 +179,13 @@ export default function HomeScreen({ stats, go, onReset, timer }: Props) {
         </button>
         <button onClick={() => go('simulation')} className="panel hover:bg-white/10 text-left">
           <div className="text-2xl">🃎</div>
-          <div className="font-bold mt-1">実戦ハンドシミュ</div>
-          <div className="text-xs text-white/60">CPUと対戦＋判断レビュー</div>
+          <div className="font-bold mt-1">1対1シミュ（HU）</div>
+          <div className="text-xs text-white/60">CPU 1人と対戦＋判断レビュー</div>
+        </button>
+        <button onClick={() => go('simulation-4max')} className="panel hover:bg-white/10 text-left border border-chipGold/40">
+          <div className="text-2xl">🎲</div>
+          <div className="font-bold mt-1">4人卓ポーカー</div>
+          <div className="text-xs text-white/60">あなた + CPU 3人で本格テーブル</div>
         </button>
         <button onClick={() => go('mental')} className="panel hover:bg-white/10 text-left">
           <div className="text-2xl">🧘</div>

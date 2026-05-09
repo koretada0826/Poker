@@ -180,6 +180,7 @@ export type Mode =
   | 'practice-draw'
   | 'practice-best5'
   | 'simulation'
+  | 'simulation-4max'
   | 'exam'
   | 'result'
   | 'review'

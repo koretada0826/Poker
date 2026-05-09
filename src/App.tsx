@@ -7,6 +7,7 @@ import HandBookScreen from './screens/HandBookScreen';
 import LessonScreen from './screens/LessonScreen';
 import PracticeScreen from './screens/PracticeScreen';
 import SimulationScreen from './screens/SimulationScreen';
+import MultiSimScreen from './screens/MultiSimScreen';
 import ExamScreen from './screens/ExamScreen';
 import MasteryPathScreen from './screens/MasteryPathScreen';
 import MathLabScreen from './screens/MathLabScreen';
@@ -121,6 +122,8 @@ export default function App() {
 
       case 'simulation':
         return <SimulationScreen stats={stats} setStats={setStats} go={setMode} hands={10} />;
+      case 'simulation-4max':
+        return <MultiSimScreen stats={stats} setStats={setStats} go={setMode} hands={8} />;
       case 'exam':
         return <ExamScreen stats={stats} setStats={setStats} go={setMode} />;
       case 'boss-exam':
@@ -193,6 +196,7 @@ function titleFor(m: Mode): string {
     'practice-bluff': 'ブラフ/バリュー',
     'practice-spr-mdf': 'SPR/MDF',
     simulation: '実戦シミュレーション',
+    'simulation-4max': '🎲 4人卓ポーカー',
     exam: '初心者卒業試験',
     'boss-exam': '🔥 ボス試験',
     bankroll: '💰 バンクロール管理',

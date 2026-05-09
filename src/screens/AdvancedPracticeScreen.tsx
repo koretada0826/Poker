@@ -90,6 +90,7 @@ export default function AdvancedPracticeScreen({
     <div className="max-w-3xl mx-auto px-4 py-6">
       <div className="mb-3 text-xs text-white/60">{title}</div>
       <QuizRunner
+        key={idx}
         quiz={quizzes[idx]}
         onAnswer={onAnswer}
         onNext={onNext}

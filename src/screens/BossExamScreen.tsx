@@ -178,6 +178,7 @@ export default function BossExamScreen({ stats, setStats, go }: Props) {
         <span className="badge bg-white/10">全体 {doneQuestions + 1} / {totalQuestions}</span>
       </div>
       <QuizRunner
+        key={`${secIdx}-${qIdx}`}
         quiz={quiz}
         onAnswer={onAnswer}
         onNext={onNext}

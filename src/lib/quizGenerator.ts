@@ -261,8 +261,11 @@ export function makeHandCompareQuiz(): Quiz {
 }
 
 // ------------- アクション判断クイズ -------------
-export function makeActionQuiz(): Quiz {
-  const scenario = pick(['no-bet', 'has-bet', 'all-options', 'fold-good']);
+type ActionScenario = 'no-bet' | 'has-bet' | 'fold-good' | 'value-bet';
+const ACTION_SCENARIOS: ActionScenario[] = ['no-bet', 'has-bet', 'fold-good', 'value-bet'];
+
+export function makeActionQuiz(scenarioOverride?: ActionScenario): Quiz {
+  const scenario: ActionScenario = scenarioOverride ?? pick(ACTION_SCENARIOS);
   switch (scenario) {
     case 'no-bet': {
       const options = ['チェック', 'ベット', 'コール', 'フォールド'];
@@ -324,6 +327,7 @@ export function makeActionQuiz(): Quiz {
         difficulty: 3,
       };
     }
+    case 'value-bet':
     default: {
       const options = ['チェック', 'ベット', 'コール', 'フォールド'];
       return {
@@ -402,8 +406,11 @@ function handLabelToCards(label: string): Card[] {
 }
 
 // ------------- フロップ後判断クイズ -------------
-export function makeFlopJudgeQuiz(): Quiz {
-  const scenario = pick(['mono-board', 'connected', 'top-pair', 'overpair']);
+type FlopScenario = 'mono-board' | 'connected' | 'top-pair' | 'overpair';
+const FLOP_SCENARIOS: FlopScenario[] = ['mono-board', 'connected', 'top-pair', 'overpair'];
+
+export function makeFlopJudgeQuiz(scenarioOverride?: FlopScenario): Quiz {
+  const scenario: FlopScenario = scenarioOverride ?? pick(FLOP_SCENARIOS);
   switch (scenario) {
     case 'mono-board': {
       const cards = [makeCard(8 as Rank, 'spades'), makeCard(2 as Rank, 'hearts')];
@@ -477,6 +484,7 @@ export function makeFlopJudgeQuiz(): Quiz {
         difficulty: 3,
       };
     }
+    case 'overpair':
     default: {
       return {
         id: nextId(),
@@ -767,22 +775,62 @@ export function makeBest5Quiz(): Quiz {
 }
 
 // ------------- 初心者ハンドクイズ生成 -------------
-export function generateBatch(type: Quiz['type'], n: number): Quiz[] {
+// シナリオ集合を一巡ずつシャッフルしてからnまで取り出す（連続重複を最小化）
+function cycleByScenarios<T>(
+  scenarios: T[],
+  make: (s: T) => Quiz,
+  n: number
+): Quiz[] {
   const out: Quiz[] = [];
-  for (let i = 0; i < n; i++) {
-    switch (type) {
-      case 'card-name': out.push(makeCardNameQuiz()); break;
-      case 'card-strength': out.push(makeCardStrengthQuiz()); break;
-      case 'hand-judge': out.push(makeHandJudgeQuiz()); break;
-      case 'hand-compare': out.push(makeHandCompareQuiz()); break;
-      case 'action': out.push(makeActionQuiz()); break;
-      case 'preflop': out.push(makePreflopQuiz()); break;
-      case 'flop-judge': out.push(makeFlopJudgeQuiz()); break;
-      case 'manners': out.push(makeMannersQuiz()); break;
-      case 'hand-draw': out.push(makeDrawQuiz()); break;
-      case 'best5': out.push(makeBest5Quiz()); break;
-      default: out.push(makeHandJudgeQuiz());
+  while (out.length < n) {
+    const order = shuffle(scenarios.slice());
+    for (const s of order) {
+      if (out.length >= n) break;
+      out.push(make(s));
     }
   }
   return out;
+}
+
+// question テキストでなるべく重複しないように生成（足りない時は重複OKで埋める）
+function uniqueByQuestion(make: () => Quiz, n: number): Quiz[] {
+  const out: Quiz[] = [];
+  const seen = new Set<string>();
+  for (let attempt = 0; attempt < n * 12 && out.length < n; attempt++) {
+    const q = make();
+    if (seen.has(q.question)) continue;
+    seen.add(q.question);
+    out.push(q);
+  }
+  while (out.length < n) out.push(make());
+  return out;
+}
+
+// MANNERS_QUIZ をシャッフルしてからn個取り出す
+function cycleManners(n: number): Quiz[] {
+  const out: Quiz[] = [];
+  while (out.length < n) {
+    const order = shuffle(MANNERS_QUIZ.slice());
+    for (const m of order) {
+      if (out.length >= n) break;
+      out.push({ ...m, id: nextId() });
+    }
+  }
+  return out;
+}
+
+export function generateBatch(type: Quiz['type'], n: number): Quiz[] {
+  switch (type) {
+    case 'card-name':     return uniqueByQuestion(makeCardNameQuiz, n);
+    case 'card-strength': return uniqueByQuestion(makeCardStrengthQuiz, n);
+    case 'hand-judge':    return uniqueByQuestion(makeHandJudgeQuiz, n);
+    case 'hand-compare':  return uniqueByQuestion(makeHandCompareQuiz, n);
+    case 'preflop':       return uniqueByQuestion(makePreflopQuiz, n);
+    case 'hand-draw':     return uniqueByQuestion(makeDrawQuiz, n);
+    case 'best5':         return uniqueByQuestion(makeBest5Quiz, n);
+    case 'action':        return cycleByScenarios(ACTION_SCENARIOS, makeActionQuiz, n);
+    case 'flop-judge':    return cycleByScenarios(FLOP_SCENARIOS, makeFlopJudgeQuiz, n);
+    case 'manners':       return cycleManners(n);
+    default:              return uniqueByQuestion(makeHandJudgeQuiz, n);
+  }
 }

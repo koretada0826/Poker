@@ -432,23 +432,36 @@ function clamp(x: number, lo: number, hi: number): number {
 function c(r: number, s: 'spades'|'hearts'|'diamonds'|'clubs'): Card { return makeCard(r as Rank, s); }
 
 // ---------- バッチ生成 ----------
-export function generateAdvancedBatch(type: Quiz['type'], n: number): Quiz[] {
+// question テキストで重複を排除して n 個取り出す
+function uniqueByQuestion(make: () => Quiz, n: number): Quiz[] {
   const out: Quiz[] = [];
-  for (let i = 0; i < n; i++) {
-    switch (type) {
-      case 'pot-odds': out.push(makePotOddsQuiz()); break;
-      case 'outs': out.push(makeOutsQuiz()); break;
-      case 'ev': out.push(makeEVQuiz()); break;
-      case 'equity': out.push(makeEquityQuiz()); break;
-      case 'range-position': out.push(makeRangePositionQuiz()); break;
-      case 'board-texture': out.push(makeBoardTextureQuiz()); break;
-      case 'bet-sizing': out.push(makeBetSizingQuiz()); break;
-      case 'bluff-value': out.push(makeBluffValueQuiz()); break;
-      case 'spr-mdf': out.push(makeSprMdfQuiz()); break;
-      default: out.push(makePotOddsQuiz());
-    }
+  const seen = new Set<string>();
+  for (let attempt = 0; attempt < n * 12 && out.length < n; attempt++) {
+    const q = make();
+    if (seen.has(q.question)) continue;
+    seen.add(q.question);
+    out.push(q);
   }
+  while (out.length < n) out.push(make());
   return out;
+}
+
+export function generateAdvancedBatch(type: Quiz['type'], n: number): Quiz[] {
+  const make = (): Quiz => {
+    switch (type) {
+      case 'pot-odds': return makePotOddsQuiz();
+      case 'outs': return makeOutsQuiz();
+      case 'ev': return makeEVQuiz();
+      case 'equity': return makeEquityQuiz();
+      case 'range-position': return makeRangePositionQuiz();
+      case 'board-texture': return makeBoardTextureQuiz();
+      case 'bet-sizing': return makeBetSizingQuiz();
+      case 'bluff-value': return makeBluffValueQuiz();
+      case 'spr-mdf': return makeSprMdfQuiz();
+      default: return makePotOddsQuiz();
+    }
+  };
+  return uniqueByQuestion(make, n);
 }
 
 // 互換チェック（未使用警告対策）

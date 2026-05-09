@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import QuizRunner from '../components/QuizRunner';
+import NextStepButtons from '../components/NextStepButtons';
 import { generateBatch } from '../lib/quizGenerator';
 import { todayKey } from '../lib/storage';
+import { markCompleted } from '../lib/roadmap';
 import type { Mode, PlayerStats, Quiz } from '../types';
 
 interface Props {
@@ -12,12 +14,13 @@ interface Props {
     | { quizType: 'manners'; group: 'manners' };
   count?: number;
   title: string;
+  current: Mode;
   stats: PlayerStats;
   setStats: (s: PlayerStats) => void;
   go: (m: Mode) => void;
 }
 
-export default function PracticeScreen({ kind, count = 10, title, stats, setStats, go }: Props) {
+export default function PracticeScreen({ kind, count = 10, title, current, stats, setStats, go }: Props) {
   const initial = useMemo(() => generateBatch(kind.quizType, count), [kind.quizType, count]);
   const [quizzes, setQuizzes] = useState<Quiz[]>(initial);
   const [idx, setIdx] = useState(0);
@@ -56,6 +59,13 @@ export default function PracticeScreen({ kind, count = 10, title, stats, setStat
     }
   };
 
+  // 完了状態に到達したらマーク（render中ではなくeffectで）
+  useEffect(() => {
+    if (done && !stats.completedLessons.includes(current)) {
+      setStats(markCompleted(stats, current));
+    }
+  }, [done, current, stats, setStats]);
+
   if (done) {
     const acc = Math.round((correctCount / quizzes.length) * 100);
     return (
@@ -73,22 +83,19 @@ export default function PracticeScreen({ kind, count = 10, title, stats, setStat
               ? '良い感じ。間違えた問題の解説をもう一度見直しましょう。'
               : 'もう一度チャレンジ。間違いから学ぶのが上達への近道です。'}
           </p>
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            <button
-              className="btn-secondary"
-              onClick={() => {
+          <div className="mt-6">
+            <NextStepButtons
+              current={current}
+              go={go}
+              retry={() => {
                 const next = generateBatch(kind.quizType, count);
                 setQuizzes(next);
                 setIdx(0);
                 setCorrectCount(0);
                 setDone(false);
               }}
-            >
-              もう1セット
-            </button>
-            <button className="btn-primary" onClick={() => go('home')}>
-              ホームへ
-            </button>
+              retryLabel="もう1セット"
+            />
           </div>
         </div>
       </div>

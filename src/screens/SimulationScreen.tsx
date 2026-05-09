@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import CardRow from '../components/CardRow';
 import LiveOddsPanel from '../components/LiveOddsPanel';
 import CheatSheet from '../components/CheatSheet';
+import NextStepButtons from '../components/NextStepButtons';
+import { markCompleted } from '../lib/roadmap';
 import {
   actionJa,
   applyPlayerAction,
@@ -68,6 +70,13 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
       if (expTimer.current) clearTimeout(expTimer.current);
     };
   }, []);
+
+  // セッション完了で simulation を完了マーク
+  useEffect(() => {
+    if (doneAll && !stats.completedLessons.includes('simulation')) {
+      setStats(markCompleted(stats, 'simulation'));
+    }
+  }, [doneAll, stats, setStats]);
 
   const onAction = (act: ActionType) => {
     if (act === 'bet' || act === 'raise') setStackBefore(state.playerChips);
@@ -152,13 +161,17 @@ export default function SimulationScreen({ stats, setStats, go, hands = 10 }: Pr
             ポーカーは「結果」より「判断」を評価するゲーム。
             短期的に負けても、良い判断を続ければ長期的には強くなれます。
           </p>
-          <div className="grid grid-cols-2 gap-2 mt-6">
-            <button className="btn-secondary" onClick={() => go('home')}>ホームへ</button>
-            <button className="btn-primary" onClick={() => {
-              setHandCount(1); setJudgeScore(0); setJudgeTotal(0);
-              setStreak(0); setBestStreak(0); setDoneAll(false);
-              setState(newSimulation());
-            }}>もう一度プレイ</button>
+          <div className="mt-6">
+            <NextStepButtons
+              current="simulation"
+              go={go}
+              retry={() => {
+                setHandCount(1); setJudgeScore(0); setJudgeTotal(0);
+                setStreak(0); setBestStreak(0); setDoneAll(false);
+                setState(newSimulation());
+              }}
+              retryLabel="もう一度プレイ"
+            />
           </div>
         </div>
       </div>

@@ -55,7 +55,7 @@ export default function App() {
       case 'tutorial':
         return <TutorialScreen stats={stats} setStats={setStats} go={setMode} />;
       case 'hand-book':
-        return <HandBookScreen go={setMode} />;
+        return <HandBookScreen go={setMode} stats={stats} setStats={setStats} />;
       case 'lesson-cards':
         return <LessonScreen lessonId="cards-basics" stats={stats} setStats={setStats} go={setMode} modeId="lesson-cards" />;
       case 'lesson-hands':
@@ -84,17 +84,17 @@ export default function App() {
 
       // 初心者向け練習
       case 'practice-hand':
-        return <PracticeScreen kind={{ quizType: 'hand-judge', group: 'hand' }} title="役判定トレーニング" count={10} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'hand-judge', group: 'hand' }} title="役判定トレーニング" count={10} current="practice-hand" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-draw':
-        return <PracticeScreen kind={{ quizType: 'hand-draw', group: 'hand' }} title="ドロー読み" count={6} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'hand-draw', group: 'hand' }} title="ドロー読み" count={6} current="practice-draw" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-best5':
-        return <PracticeScreen kind={{ quizType: 'best5', group: 'hand' }} title="最強5枚クイズ" count={5} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'best5', group: 'hand' }} title="最強5枚クイズ" count={5} current="practice-best5" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-action':
-        return <PracticeScreen kind={{ quizType: 'action', group: 'action' }} title="アクション練習" count={10} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'action', group: 'action' }} title="アクション練習" count={10} current="practice-action" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-preflop':
-        return <PracticeScreen kind={{ quizType: 'preflop', group: 'strategy' }} title="プリフロップ練習" count={10} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'preflop', group: 'strategy' }} title="プリフロップ練習" count={10} current="practice-preflop" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-flop':
-        return <PracticeScreen kind={{ quizType: 'flop-judge', group: 'strategy' }} title="フロップ後判断練習" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <PracticeScreen kind={{ quizType: 'flop-judge', group: 'strategy' }} title="フロップ後判断練習" count={8} current="practice-flop" stats={stats} setStats={setStats} go={setMode} />;
 
       // 上級練習
       case 'math-lab':
@@ -102,23 +102,23 @@ export default function App() {
       case 'range-trainer':
         return <RangeTrainerScreen go={setMode} />;
       case 'practice-pot-odds':
-        return <AdvancedPracticeScreen quizType="pot-odds" group="math" title="ポットオッズ練習" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="pot-odds" group="math" title="ポットオッズ練習" count={8} current="practice-pot-odds" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-outs':
-        return <AdvancedPracticeScreen quizType="outs" group="math" title="アウツ→%練習" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="outs" group="math" title="アウツ→%練習" count={8} current="practice-outs" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-ev':
-        return <AdvancedPracticeScreen quizType="ev" group="math" title="EV判断練習" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="ev" group="math" title="EV判断練習" count={8} current="practice-ev" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-equity':
-        return <AdvancedPracticeScreen quizType="equity" group="range" title="マッチアップエクイティ" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="equity" group="range" title="マッチアップエクイティ" count={8} current="practice-equity" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-range':
-        return <AdvancedPracticeScreen quizType="range-position" group="range" title="ポジション別レンジクイズ" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="range-position" group="range" title="ポジション別レンジクイズ" count={8} current="practice-range" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-board':
-        return <AdvancedPracticeScreen quizType="board-texture" group="board" title="ボードテクスチャ分類" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="board-texture" group="board" title="ボードテクスチャ分類" count={8} current="practice-board" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-sizing':
-        return <AdvancedPracticeScreen quizType="bet-sizing" group="sizing" title="ベットサイジング判断" count={6} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="bet-sizing" group="sizing" title="ベットサイジング判断" count={6} current="practice-sizing" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-bluff':
-        return <AdvancedPracticeScreen quizType="bluff-value" group="bluff" title="ブラフ／バリュー判断" count={6} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="bluff-value" group="bluff" title="ブラフ／バリュー判断" count={6} current="practice-bluff" stats={stats} setStats={setStats} go={setMode} />;
       case 'practice-spr-mdf':
-        return <AdvancedPracticeScreen quizType="spr-mdf" group="math" title="SPR/MDF/α 計算" count={8} stats={stats} setStats={setStats} go={setMode} />;
+        return <AdvancedPracticeScreen quizType="spr-mdf" group="math" title="SPR/MDF/α 計算" count={8} current="practice-spr-mdf" stats={stats} setStats={setStats} go={setMode} />;
 
       case 'simulation':
         return <SimulationScreen stats={stats} setStats={setStats} go={setMode} hands={10} />;

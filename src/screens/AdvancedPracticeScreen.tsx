@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import QuizRunner from '../components/QuizRunner';
+import NextStepButtons from '../components/NextStepButtons';
 import { generateAdvancedBatch } from '../lib/advancedQuizGenerator';
 import { todayKey } from '../lib/storage';
+import { markCompleted } from '../lib/roadmap';
 import type { Mode, PlayerStats, Quiz, QuizType } from '../types';
 
 interface Props {
@@ -12,13 +14,14 @@ interface Props {
   group: 'math' | 'range' | 'board' | 'sizing' | 'bluff';
   count?: number;
   title: string;
+  current: Mode;
   stats: PlayerStats;
   setStats: (s: PlayerStats) => void;
   go: (m: Mode) => void;
 }
 
 export default function AdvancedPracticeScreen({
-  quizType, group, count = 8, title, stats, setStats, go,
+  quizType, group, count = 8, title, current, stats, setStats, go,
 }: Props) {
   const initial = useMemo(() => generateAdvancedBatch(quizType, count), [quizType, count]);
   const [quizzes, setQuizzes] = useState<Quiz[]>(initial);
@@ -54,6 +57,13 @@ export default function AdvancedPracticeScreen({
     else setIdx(idx + 1);
   };
 
+  // 完了マーク (effect)
+  useEffect(() => {
+    if (done && !stats.completedLessons.includes(current)) {
+      setStats(markCompleted(stats, current));
+    }
+  }, [done, current, stats, setStats]);
+
   if (done) {
     const acc = Math.round((correctCount / quizzes.length) * 100);
     return (
@@ -67,19 +77,16 @@ export default function AdvancedPracticeScreen({
               : acc >= 60 ? '✅ 合格圏。理論を実戦で使えるよう繰り返しを。'
               : '🔁 まだ穴あり。レッスンを再読してから再挑戦推奨。'}
           </p>
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            <button
-              className="btn-secondary"
-              onClick={() => {
+          <div className="mt-6">
+            <NextStepButtons
+              current={current}
+              go={go}
+              retry={() => {
                 setQuizzes(generateAdvancedBatch(quizType, count));
                 setIdx(0); setCorrectCount(0); setDone(false);
               }}
-            >
-              もう1セット
-            </button>
-            <button className="btn-primary" onClick={() => go('mastery-path')}>
-              最強ルートへ
-            </button>
+              retryLabel="もう1セット"
+            />
           </div>
         </div>
       </div>

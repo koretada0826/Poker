@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { LESSONS } from '../data/lessons';
 import { ADVANCED_LESSONS } from '../data/advancedLessons';
+import { nextInRoadmap, nextStepTitle } from '../lib/roadmap';
 import type { Mode, PlayerStats } from '../types';
 
 type LessonId =
@@ -32,7 +33,8 @@ export default function LessonScreen({ lessonId, stats, setStats, go, modeId }: 
         exp: stats.exp + 30,
       });
     }
-    go('home');
+    const next = nextInRoadmap(modeId);
+    go(next ?? 'home');
   };
 
   return (
@@ -89,7 +91,7 @@ export default function LessonScreen({ lessonId, stats, setStats, go, modeId }: 
             </button>
           ) : (
             <button className="btn-success flex-1" onClick={finish}>
-              レッスン完了 ✓
+              {nextStepTitle(modeId) ? `完了 → ${nextStepTitle(modeId)} へ` : 'レッスン完了 ✓'}
             </button>
           )}
         </div>

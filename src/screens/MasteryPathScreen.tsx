@@ -153,6 +153,9 @@ export default function MasteryPathScreen({ stats, go }: Props) {
           トランプ未経験 → ルール → 数学 → レンジ → ボード → サイジング → GTO → メンタル → バンクロール → プロ思考。<br />
           各ステージは下の段階の理解度で自動開放。順番に進めば論理的にレベルが積み上がる。
         </p>
+        <p className="text-[11px] text-white/50 mt-2">
+          ✓ = 一度でも完了したステップ。▶ = まだ未着手 or 途中。完了するとチェックが付き、自動で次のステップへ進めます。
+        </p>
       </div>
 
       <div className="space-y-4">

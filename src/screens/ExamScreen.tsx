@@ -71,10 +71,14 @@ export default function ExamScreen({ stats, setStats, go }: Props) {
         return acc >= s.required;
       });
       const newTitle = allPass ? '初心者卒業 / 実卓デビューOK' : stats.title;
+      const completed = stats.completedLessons.includes('exam')
+        ? stats.completedLessons
+        : [...stats.completedLessons, 'exam'];
       setStats({
         ...stats,
         exp: stats.exp + 100,
         title: allPass ? newTitle : stats.title,
+        completedLessons: completed,
       });
       setDone(true);
       void total; void correctTotal;
@@ -144,11 +148,11 @@ export default function ExamScreen({ stats, setStats, go }: Props) {
         )}
 
         <div className="grid grid-cols-2 gap-3 mt-6">
-          <button className="btn-secondary" onClick={() => go('home')}>
-            ホームへ
-          </button>
-          <button className="btn-primary" onClick={() => go('exam')}>
+          <button className="btn-secondary" onClick={() => go('exam')}>
             もう一度受ける
+          </button>
+          <button className="btn-primary" onClick={() => go(allPass ? 'lesson-math' : 'home')}>
+            {allPass ? '次のステップ → 数学基礎' : 'ホームへ'}
           </button>
         </div>
       </div>

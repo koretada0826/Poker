@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
 import CardRow from '../components/CardRow';
 import { makeCard } from '../lib/deck';
-import type { Card, Mode, Rank } from '../types';
+import { markCompleted, nextInRoadmap, nextStepTitle } from '../lib/roadmap';
+import type { Card, Mode, PlayerStats, Rank } from '../types';
 
 interface Props {
   go: (m: Mode) => void;
+  stats?: PlayerStats;
+  setStats?: (s: PlayerStats) => void;
 }
 
 interface Entry {
@@ -102,7 +106,17 @@ const ENTRIES: Entry[] = [
   },
 ];
 
-export default function HandBookScreen({ go }: Props) {
+export default function HandBookScreen({ go, stats, setStats }: Props) {
+  // 開いた時点で「実施済み」マーク（10種類すべて見せている前提）
+  useEffect(() => {
+    if (stats && setStats && !stats.completedLessons.includes('hand-book')) {
+      setStats(markCompleted(stats, 'hand-book'));
+    }
+  }, [stats, setStats]);
+
+  const next = nextInRoadmap('hand-book');
+  const nextTitle = nextStepTitle('hand-book');
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
       <div className="text-center mb-4">
@@ -142,9 +156,15 @@ export default function HandBookScreen({ go }: Props) {
         <button className="btn-secondary" onClick={() => go('home')}>
           ホームへ
         </button>
-        <button className="btn-primary" onClick={() => go('practice-hand')}>
-          役判定で練習する →
-        </button>
+        {next ? (
+          <button className="btn-primary" onClick={() => go(next)}>
+            次のステップ → <span className="text-[10px] opacity-80 ml-1">{nextTitle}</span>
+          </button>
+        ) : (
+          <button className="btn-primary" onClick={() => go('practice-hand')}>
+            役判定で練習する →
+          </button>
+        )}
       </div>
     </div>
   );
